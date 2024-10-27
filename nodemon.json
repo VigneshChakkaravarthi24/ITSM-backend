@@ -1,0 +1,5 @@
+{
+    "env":{
+        "MONGODB_URI":"mongodb+srv://verbatim@wmu-verbatim.f9xrrux.mongodb.net/"
+    }
+}
