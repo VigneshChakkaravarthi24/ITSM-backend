@@ -5,25 +5,54 @@ const Tickets = require("../models/sqlModels/Tickets")
 // const Audio = require("../models/sqlModels/audioStatus");
 // const Answers = require("../models/sqlModels/answer")
 const generateJWT=require("../util/JWT")
-const sendEmail = require("../util/sendEmail")
+const sendEmail = require("../util/sendEmail");
+const Admin = require("../models/sqlModels/Admin");
 
-// // needed
 
-exports.login=async(req,res,next)=>{
+exports.getTickets=async(req,res,next)=>{
     const email=req.body.email
-    const user =await User.findOne({where:{UserEmail:email}})
-    if(!user)
+    const tickets = await Tickets.findAll({
+        include:[{
+            model:User
+        }]
+    })
+    if(tickets)
     {
-    return res.status(404).json({ errorMessage: 'User not found' });
-
+        return res.status(200).json({ticket:tickets})
     }
+    return res.status(404).json({errorMessage:"No tickets found"})
+}
+exports.login = async (req, res, next) => {
+    const email = req.body.email;
+    const role = req.body.role;
+  
+    let user; 
+  
+    try {
+      if (role === 'User') {
+        user = await User.findOne({ where: { UserEmail: email } });
+        if (!user) {
+          return res.status(404).json({ errorMessage: 'User not found' });
+        }
+      } else if (role === 'Admin') {
+        user = await Admin.findOne({ where: { adminEmail: email } });
+        if (!user) {
+          return res.status(404).json({ errorMessage: 'Admin not found' });
+        }
+      }
+      else{
+        return res.status(404).json({ errorMessage: 'Invalid Group ' });
 
-    const jwt=generateJWT(email)
-    return res.status(200).json({ token:jwt,user:user});
-
-
-
+      }
+  
+      const jwt = generateJWT(email);
+      return res.status(200).json({ token: jwt, user: user });
+    } catch (err) {
+      console.error('Login error:', err);
+      return res.status(500).json({ errorMessage: 'Internal server error' });
     }
+  };
+  
 
     exports.createTicket=async(req,res,next)=>{
        
@@ -75,79 +104,6 @@ exports.filterTicketByUserID=async(req,res,next)=>
     const tickets =await Tickets.findAll({where:{UserID:user.UserID}})
     return res.json({tickets:tickets})
 }
-// exports.getEssayQuestionAndStatus=async(req,res,next)=>{
-//     const email = req.email
-//     const quizCode = req.quizCode
-//     try
-//     {
-//         const user = await User.findOne({email:email})
-//         const quiz = await Quiz.findOne({quizCode:quizCode})
-//         const answer = await Answers.findOne({userId:user.userID,quizId:quiz.quizId})
-//         remainingTime= answer? answer.examDurationLeftInSeconds:quiz.testDurationInSeconds
-//         let answerContent= answer?answer.answer:''
-//         return res.json({quiz:quiz,remainingTime:remainingTime,answer:answerContent})
-//     }
-//     catch(error)
-//     {
-//         return res.status(404).json({ errorMessage: `An error has occured ${error}` })
-
-//     }
-// }
-// exports.endExam=async(req,res,next)=>{
-//     const email=req.email
-//     const quizCode=req.quizCode
-//     try{
-
-//         const user=await User.findOne({where:{email:email}})
-//         const quiz=await Quiz.findOne({where:{quizCode:quizCode}})
-//         const examStatus=await ExamStatus.create({
-//             userID:user.userID,
-//             quizId:quiz.quizId,
-//             status:'ended'
-//         })
-//         const result =await examStatus.save()
-//         if(result)
-//         {
-//             return res.json({message:"success"})
-//         }
-        
-//     }
-
-//     catch(error)
-//     {
-//         return res.status(404).json({ errorMessage: `An error has occured ${error}` })
-
-//     }
-// }
-// exports.validateTestFinish=async(req,res,next)=>{
-//     const email=req.email
-//     const quizCode=req.quizCode
-//     try
-//     {
-//         const user = await User.findOne({email:email})
-//         const quiz = await Quiz.findOne({quizCode:quizCode})
-//         const examStatus = await ExamStatus.findOne({userId:user.userID,quizId:quiz.quizId})
-//         if(examStatus)
-//         {
-            
-//             return res.json({errorMessage:"You have already completed the test!. Kindly contact admin if you wish to restart."})
-//         }
-//         else
-//         {
-//             next()
-//         }
-//     }
-//     catch(error)
-//     {
-//         return res.status(404).json({ errorMessage: `An error has occured ${error}` })
-
-//     }
-    
-
-
-// }
-// // needed
-
 
 
 
@@ -168,75 +124,3 @@ exports.enteredFinalController=async(req,res,next)=>{
 
 
 
-// exports.saveWritingAnswer = async (req, res, next) => {
-//     const email = req.email
-//     const quizCode = req.quizCode 
-//     const answerText = req.body.answer
-//     const examDurationLeftInSeconds = req.body.remainingTime
-//     const ended = req.body.ended
-//     const verbatimFlagged=req.body.verbatimFlagged
-//     // Remove substrings, keeping only the longest phrases
-//     const filteredVerbatimFlagged = JSON.stringify(verbatimFlagged.filter((phrase, index) => 
-//         !verbatimFlagged.some((otherPhrase, otherIndex) => 
-//             otherIndex !== index && otherPhrase.includes(phrase)
-//         )
-//     ));
-    
-//         try
-//     {
-//         const user = await User.findOne({where:{email:email}})
-//         const quiz= await Quiz.findOne({where:{quizCode:quizCode}})
-//         let answer = await Answers.findOne({ where: { userID: user.userID, quizId: quiz.quizId } });
-//         let result
-//         if (answer) {
-//             // If the answer exists, update the existing answer
-//             answer.answer = answerText;
-//             answer.verbatimWordsFlagged = filteredVerbatimFlagged;
-//             answer.examDurationLeftInSeconds = examDurationLeftInSeconds;
-//            result= await answer.save();
-//         } else {
-//             // If the answer does not exist, create a new one
-//             answer = await Answers.create({
-//                 userID: user.userID,
-//                 quizId: quiz.quizId,
-//                 answer: answerText,
-//                 verbatimWordsFlagged: filteredVerbatimFlagged,
-//                 examDurationLeftInSeconds: examDurationLeftInSeconds
-//             });
-//             result=await answer.save();
-//         }
-
-//           if(ended)
-//           {
-//             const examStatus=await ExamStatus.create({
-//                 userID: user.userID,
-//             quizId: quiz.quizId, 
-//             status:'submitted'
-//             })
-//             await examStatus.save();
-//           }
-//           if(result)
-//           {
-//             return res.json({message:'Save Successful'})
-//           }
-
-
-                    
-        
-//     }
-//     catch(error)
-//     {
-//         console.log("The error is the answer is",error)
-//     }
-    
-// }
-
-
-
-
-
-
-
-
-
-    

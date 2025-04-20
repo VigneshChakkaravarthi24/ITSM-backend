@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 
 const isAuth = (req,res,next)=>{
     const secretKey = 'itsm';
+    console.log("the reques is ", req.headers)
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1].replace('"','');
 
@@ -10,7 +11,6 @@ const isAuth = (req,res,next)=>{
     }
     jwt.verify(token, secretKey, (err, decodedToken) => {
         if (err) {
-        
             return res.status(403).json({errorMessage:"Unauthorized",error:err}); // Forbidden
         }
 
